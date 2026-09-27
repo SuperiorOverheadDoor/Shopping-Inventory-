@@ -1,7 +1,479 @@
-cd pantry-app
-git init
-git add .
-git commit -m "Pantry home inventory app"
-git branch -M main
-git remote add origin https://github.com/<your-username>/pantry-app.git
-git push -u origin main
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pantry — Home Inventory</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pantry">
+<meta name="theme-color" content="#57724D">
+<style>
+:root{
+  --bg:#F6F4EE; --panel:#FFFFFF; --ink:#20261F; --sub:#6B6F63;
+  --sage:#57724D; --sage-dark:#3E5537; --amber:#C6862C; --line:#E4E0D4;
+  --danger:#B7472A; --low:#C6862C; --ok:#57724D;
+  box-sizing:border-box;
+  padding-top: env(safe-area-inset-top,0px);
+  padding-bottom: env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1B1E19; --panel:#242820; --ink:#EDEAE0; --sub:#9A9C8F;
+    --sage:#7FA070; --sage-dark:#5B7553; --amber:#D9A24E; --line:#333827;
+  }
+}
+html{scroll-padding-top: env(safe-area-inset-top,0px); height:100%;}
+*{box-sizing:border-box;}
+body{margin:0; background:var(--bg); color:var(--ink); height:100%; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
+header{position:sticky; top:0; z-index:10; background:var(--bg); padding:calc(16px + env(safe-area-inset-top,0px)) 18px 0; border-bottom:1px solid var(--line);}
+.top{display:flex; justify-content:space-between; align-items:flex-start;}
+h1{font-size:1.4rem; margin:0 0 2px; font-weight:700; letter-spacing:-0.01em;}
+.tag{color:var(--sub); font-size:0.82rem; margin:0 0 12px;}
+.role{font-size:0.75rem; color:var(--sub); background:var(--panel); border:1px solid var(--line); border-radius:999px; padding:5px 10px; cursor:pointer;}
+.search{display:flex; gap:8px; align-items:center; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px 14px;}
+.search input{border:none; outline:none; background:none; color:var(--ink); font-size:1rem; width:100%;}
+.nav{display:flex; gap:4px; margin-top:12px;}
+.navbtn{flex:1; text-align:center; padding:10px 4px; font-size:0.85rem; color:var(--sub); border-bottom:2px solid transparent; cursor:pointer;}
+.navbtn.active{color:var(--sage-dark); border-color:var(--sage); font-weight:700;}
+.tabs{display:flex; gap:6px; margin:12px 0 12px; overflow-x:auto; padding-bottom:2px;}
+.tab{flex:none; padding:7px 13px; border-radius:999px; font-size:0.82rem; background:var(--panel); border:1px solid var(--line); color:var(--sub); cursor:pointer;}
+.tab.active{background:var(--sage); color:#fff; border-color:var(--sage);}
+main{padding:16px 18px 100px; max-width:760px; margin:0 auto;}
+.stats{display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:18px;}
+@media(min-width:520px){.stats{grid-template-columns:repeat(4,1fr);}}
+.stat{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px;}
+.stat b{font-size:1.5rem; display:block;}
+.stat span{color:var(--sub); font-size:0.76rem;}
+.section-title{font-size:0.92rem; font-weight:700; margin:22px 0 10px;}
+.mini{display:flex; gap:10px; overflow-x:auto; padding-bottom:4px;}
+.minicard{flex:none; width:110px; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px; text-align:center;}
+.minicard .ic{font-size:1.5rem;}
+.minicard b{display:block; font-size:0.8rem; margin-top:4px;}
+.minicard span{color:var(--sub); font-size:0.7rem;}
+.card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:12px; display:flex; gap:12px; align-items:center; margin-bottom:8px;}
+.icon{width:48px; height:48px; border-radius:10px; background:var(--bg); display:flex; align-items:center; justify-content:center; font-size:1.4rem; flex:none; overflow:hidden;}
+.icon img{width:100%; height:100%; object-fit:cover;}
+.card .info{flex:1; min-width:0;}
+.card .info b{display:block; font-size:0.96rem;}
+.card .info span{color:var(--sub); font-size:0.78rem;}
+.badge{font-size:0.7rem; padding:2px 8px; border-radius:999px; font-weight:600;}
+.badge.ok{background:rgba(87,114,77,.15); color:var(--sage);}
+.badge.low{background:rgba(198,134,44,.15); color:var(--amber);}
+.badge.out{background:rgba(183,71,42,.15); color:var(--danger);}
+.qty-ctrl{display:flex; flex-direction:column; align-items:center; gap:4px; flex:none;}
+.qty-row{display:flex; align-items:center; gap:6px;}
+.qty-ctrl button{width:28px; height:28px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--ink); font-size:1rem; cursor:pointer;}
+.qty-ctrl .n{min-width:30px; text-align:center; font-weight:700; font-size:0.85rem;}
+.restock{font-size:0.65rem; color:var(--sage-dark); background:none; border:none; cursor:pointer; text-decoration:underline;}
+.empty{color:var(--sub); font-size:0.9rem; padding:24px 4px; text-align:center;}
+.fab{position:fixed; right:20px; bottom:calc(20px + env(safe-area-inset-bottom,0px)); width:56px; height:56px; border-radius:50%; background:var(--sage); color:#fff; border:none; font-size:1.6rem; box-shadow:0 6px 18px rgba(0,0,0,.25); cursor:pointer; z-index:20;}
+.overlay{position:fixed; inset:0; background:rgba(0,0,0,.4); display:none; align-items:flex-end; z-index:30;}
+.overlay.show{display:flex;}
+.sheet{position:relative; background:var(--panel); width:100%; max-height:88vh; overflow-y:auto; border-radius:20px 20px 0 0; padding:20px 20px calc(24px + env(safe-area-inset-bottom,0px));}
+.sheet h2{margin:0 0 14px; font-size:1.15rem;}
+label{display:block; font-size:0.78rem; color:var(--sub); margin:12px 0 4px;}
+input,select,textarea{width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--ink); font-size:0.95rem; font-family:inherit;}
+textarea{resize:vertical; min-height:56px;}
+.row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+.row3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;}
+.btn{margin-top:18px; width:100%; padding:13px; border-radius:12px; border:none; background:var(--sage); color:#fff; font-size:1rem; font-weight:600; cursor:pointer;}
+.btn.ghost{background:none; color:var(--sub); border:1px solid var(--line);}
+.close{position:absolute; top:14px; right:18px; background:none; border:none; font-size:1.3rem; color:var(--sub); cursor:pointer;}
+.photo-pick{display:flex; align-items:center; gap:10px; margin-top:6px;}
+.photo-pick .prev{width:52px; height:52px; border-radius:10px; background:var(--bg); border:1px dashed var(--line); overflow:hidden; display:flex; align-items:center; justify-content:center; font-size:1.2rem;}
+.photo-pick .prev img{width:100%; height:100%; object-fit:cover;}
+.toast{position:fixed; top:calc(10px + env(safe-area-inset-top,0px)); left:50%; transform:translateX(-50%); background:var(--sage-dark); color:#fff; padding:10px 18px; border-radius:10px; font-size:0.85rem; z-index:50; opacity:0; transition:opacity .3s; pointer-events:none;}
+.toast.show{opacity:1;}
+.gate{position:fixed; inset:0; background:var(--bg); z-index:100; display:flex; align-items:center; justify-content:center; padding:24px;}
+.gate .box{max-width:360px; width:100%;}
+.gate h1{font-size:1.6rem; margin-bottom:4px;}
+.gate p{color:var(--sub); font-size:0.9rem; margin-bottom:22px;}
+.member-row{display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--line); font-size:0.88rem;}
+.member-row select{width:auto;}
+.code-box{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px; text-align:center; font-size:1.3rem; font-weight:700; letter-spacing:0.1em; margin:10px 0;}
+</style>
+</head>
+<body>
+
+<div class="gate" id="gate">
+  <div class="box">
+    <h1>🥫 Pantry</h1>
+    <p>Set up your household to get started.</p>
+    <label>Your name</label>
+    <input id="g-name" placeholder="e.g. Sam">
+    <button class="btn" id="g-create">Create a new household</button>
+    <label style="margin-top:22px">Have a household code?</label>
+    <input id="g-code" placeholder="e.g. ABC123" style="text-transform:uppercase">
+    <button class="btn ghost" id="g-join">Join household</button>
+    <p id="g-error" style="color:var(--danger); font-size:0.82rem;"></p>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+<header>
+  <div class="top">
+    <div><h1>Pantry</h1><p class="tag">Know what's home. Never run out.</p></div>
+    <div class="role" id="roleBtn">Owner ▾</div>
+  </div>
+  <div class="search"><span>🔍</span><input id="search" placeholder="Search name, barcode, brand, vendor..."></div>
+  <div class="nav">
+    <div class="navbtn active" data-tab="dash">Dashboard</div>
+    <div class="navbtn" data-tab="inv">Inventory</div>
+    <div class="navbtn" data-tab="shop">Shopping List</div>
+  </div>
+</header>
+
+<main>
+  <div id="dashView"></div>
+  <div id="invView" style="display:none">
+    <div class="tabs" id="catTabs"></div>
+    <div id="invList"></div>
+  </div>
+  <div id="shopView" style="display:none">
+    <div class="tabs" id="vendorTabs"></div>
+    <div id="shopList"></div>
+  </div>
+</main>
+
+<button class="fab" id="addBtn">+</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="overlay" id="overlay">
+  <div class="sheet">
+    <button class="close" id="closeSheet">✕</button>
+    <h2 id="sheetTitle">Add item</h2>
+    <div class="row2">
+      <div><label>Name</label><input id="f-name" placeholder="Toilet Paper"></div>
+      <div><label>Brand</label><input id="f-brand" placeholder="Charmin"></div>
+    </div>
+    <div class="row2">
+      <div><label>Barcode (UPC)</label><input id="f-barcode" placeholder="0-12345-67890"></div>
+      <div><label>&nbsp;</label><button class="btn ghost" id="scanBtn" type="button" style="margin-top:0">📷 Scan barcode</button></div>
+    </div>
+    <label>Photo</label>
+    <div class="photo-pick">
+      <div class="prev" id="photoPrev">📦</div>
+      <input type="file" id="f-photo" accept="image/*" style="width:auto">
+    </div>
+    <div class="row2">
+      <div><label>Category</label><select id="f-cat"></select></div>
+      <div><label>Storage location</label>
+        <select id="f-loc"><option>Pantry</option><option>Bathroom</option><option>Garage</option><option>Basement</option><option>Freezer</option><option>Refrigerator</option><option>Laundry</option><option>Office</option></select>
+      </div>
+    </div>
+    <div class="row3">
+      <div><label>Unit</label><select id="f-unit"><option>each</option><option>roll</option><option>can</option><option>bottle</option><option>bag</option><option>box</option><option>lb</option></select></div>
+      <div><label>Units/pack</label><input id="f-perpack" type="number" min="1" value="1"></div>
+      <div><label>Preferred store</label>
+        <select id="f-store"><option>Walmart</option><option>Shaw's</option><option>Stop &amp; Shop</option><option>Costco</option><option>BJ's</option><option>Target</option><option>Amazon</option></select>
+      </div>
+    </div>
+    <div class="row2">
+      <div><label>Current quantity</label><input id="f-qty" type="number" min="0" value="0"></div>
+      <div><label>Minimum quantity</label><input id="f-min" type="number" min="0" value="0"></div>
+    </div>
+    <label>Notes</label>
+    <textarea id="f-notes" placeholder="Anything worth remembering about this item"></textarea>
+    <button class="btn" id="saveBtn">Save item</button>
+  </div>
+</div>
+
+<div class="overlay" id="householdOverlay">
+  <div class="sheet">
+    <button class="close" id="closeHousehold">✕</button>
+    <h2>Household</h2>
+    <p style="color:var(--sub); font-size:0.85rem">Share this code so family members can join.</p>
+    <div class="code-box" id="codeDisplay">------</div>
+    <div class="section-title">Members</div>
+    <div id="memberList"></div>
+    <button class="btn ghost" id="leaveHousehold" style="margin-top:20px">Leave household</button>
+  </div>
+</div>
+
+<!-- Firebase (loaded from Google's CDN — fine once this is hosted on your own domain) -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+const CATS = ["Pantry","Beverages","Bathroom","Laundry","Cleaning","Pet Supplies","Freezer","Refrigerator","Office","Baby Supplies"];
+const ICON = {Pantry:"🥫",Beverages:"🥤",Bathroom:"🧻",Laundry:"🧺",Cleaning:"🧽","Pet Supplies":"🐾",Freezer:"🧊",Refrigerator:"🥛",Office:"🗂️","Baby Supplies":"🍼"};
+const VENDORS = ["Walmart","Shaw's","Stop & Shop","Costco","BJ's","Target","Amazon"];
+
+let items = [];
+let members = {};
+let catFilter="All", vendorFilter="All", tab="dash", pendingPhoto="";
+let db, auth, uid, householdId, myRole="Adult", itemsUnsub=null, membersUnsub=null;
+
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('show'),2200); }
+
+// ---------- Firebase setup ----------
+firebase.initializeApp(window.FIREBASE_CONFIG);
+auth = firebase.auth();
+db = firebase.firestore();
+db.enablePersistence({synchronizeTabs:true}).catch(()=>{});
+
+auth.onAuthStateChanged(async (user) => {
+  if(!user){ auth.signInAnonymously().catch(e=>toast('Sign-in failed: '+e.message)); return; }
+  uid = user.uid;
+  const saved = JSON.parse(localStorage.getItem('pantry-household')||'null');
+  if(saved && saved.householdId){
+    householdId = saved.householdId;
+    await enterHousehold();
+  }
+});
+
+document.getElementById('g-create').onclick = async () => {
+  const name = document.getElementById('g-name').value.trim() || 'Owner';
+  const code = Math.random().toString(36).slice(2,8).toUpperCase();
+  try{
+    await db.collection('households').doc(code).set({createdAt: firebase.firestore.FieldValue.serverTimestamp()});
+    await db.collection('households').doc(code).collection('members').doc(uid).set({name, role:'Owner'});
+    localStorage.setItem('pantry-household', JSON.stringify({householdId:code}));
+    householdId = code;
+    await enterHousehold();
+    toast('Household created — code '+code);
+  }catch(e){ document.getElementById('g-error').textContent = e.message; }
+};
+
+document.getElementById('g-join').onclick = async () => {
+  const code = document.getElementById('g-code').value.trim().toUpperCase();
+  const name = document.getElementById('g-name').value.trim() || 'Family member';
+  if(!code) return;
+  try{
+    const doc = await db.collection('households').doc(code).get();
+    if(!doc.exists){ document.getElementById('g-error').textContent = 'No household with that code.'; return; }
+    await db.collection('households').doc(code).collection('members').doc(uid).set({name, role:'Adult'});
+    localStorage.setItem('pantry-household', JSON.stringify({householdId:code}));
+    householdId = code;
+    await enterHousehold();
+    toast('Joined household '+code);
+  }catch(e){ document.getElementById('g-error').textContent = e.message; }
+};
+
+async function enterHousehold(){
+  document.getElementById('gate').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('codeDisplay').textContent = householdId;
+
+  membersUnsub && membersUnsub();
+  membersUnsub = db.collection('households').doc(householdId).collection('members')
+    .onSnapshot(snap=>{
+      members = {};
+      snap.forEach(d=> members[d.id] = d.data());
+      myRole = (members[uid] && members[uid].role) || 'Adult';
+      document.getElementById('roleBtn').textContent = myRole+' ▾';
+      document.getElementById('addBtn').style.display = myRole==='Child' ? 'none':'block';
+      renderMembers();
+      render();
+    });
+
+  itemsUnsub && itemsUnsub();
+  itemsUnsub = db.collection('households').doc(householdId).collection('items')
+    .onSnapshot(snap=>{
+      items = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      render();
+    }, err=> toast('Sync error: '+err.message));
+}
+
+function itemsRef(){ return db.collection('households').doc(householdId).collection('items'); }
+
+// ---------- Household panel ----------
+document.getElementById('roleBtn').onclick = ()=> document.getElementById('householdOverlay').classList.add('show');
+document.getElementById('closeHousehold').onclick = ()=> document.getElementById('householdOverlay').classList.remove('show');
+document.getElementById('householdOverlay').onclick = (e)=>{ if(e.target.id==='householdOverlay') e.target.classList.remove('show'); };
+document.getElementById('leaveHousehold').onclick = ()=>{
+  localStorage.removeItem('pantry-household');
+  location.reload();
+};
+function renderMembers(){
+  const el = document.getElementById('memberList');
+  el.innerHTML = Object.entries(members).map(([id,m])=>{
+    const editable = myRole==='Owner' && id!==uid;
+    return `<div class="member-row"><span>${m.name}${id===uid?' (you)':''}</span>
+      ${editable ? `<select data-uid="${id}"><option ${m.role==='Owner'?'selected':''}>Owner</option><option ${m.role==='Adult'?'selected':''}>Adult</option><option ${m.role==='Child'?'selected':''}>Child</option></select>`
+      : `<span>${m.role}</span>`}</div>`;
+  }).join('');
+  el.querySelectorAll('select[data-uid]').forEach(s=>{
+    s.onchange = ()=> db.collection('households').doc(householdId).collection('members').doc(s.dataset.uid).update({role:s.value});
+  });
+}
+
+// ---------- Rendering (same UI logic as before, backed by Firestore) ----------
+function packLabel(it){
+  if(it.perPack<=1) return `${it.qty} ${it.unit}${it.qty!==1?'s':''}`;
+  const packs=Math.floor(it.qty/it.perPack), rem=it.qty%it.perPack;
+  let out=[]; if(packs>0) out.push(`${packs} pack${packs!==1?'s':''}`);
+  if(rem>0||packs===0) out.push(`${rem} ${it.unit}${rem!==1?'s':''}`);
+  return out.join(" + ")+` (${it.qty} total)`;
+}
+function status(it){ if(it.qty<=0) return {cls:'out',label:'Out of stock'}; if(it.qty<it.min) return {cls:'low',label:'Running low'}; return {cls:'ok',label:'Stocked'}; }
+function iconFor(it){ return it.photo ? `<img src="${it.photo}">` : (ICON[it.cat]||'📦'); }
+
+function switchTab(t){
+  tab=t;
+  document.querySelectorAll('.navbtn').forEach(b=>b.classList.toggle('active', b.dataset.tab===t));
+  document.getElementById('dashView').style.display = t==='dash'?'block':'none';
+  document.getElementById('invView').style.display = t==='inv'?'block':'none';
+  document.getElementById('shopView').style.display = t==='shop'?'block':'none';
+  render();
+}
+document.querySelectorAll('.navbtn').forEach(b=> b.onclick=()=>switchTab(b.dataset.tab));
+
+function renderDash(){
+  const low = items.filter(i=>i.qty>0 && i.qty<i.min).length;
+  const out = items.filter(i=>i.qty<=0).length;
+  const buy = items.filter(i=>i.qty<i.min).length;
+  const recent = [...items].sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).slice(0,4);
+  const top = [...items].sort((a,b)=>(b.purchases||0)-(a.purchases||0)).slice(0,4);
+  document.getElementById('dashView').innerHTML = `
+    <div class="stats">
+      <div class="stat"><b>${items.length}</b><span>Total items</span></div>
+      <div class="stat"><b style="color:var(--low)">${low}</b><span>Running low</span></div>
+      <div class="stat"><b style="color:var(--danger)">${out}</b><span>Out of stock</span></div>
+      <div class="stat"><b style="color:var(--sage)">${buy}</b><span>To buy today</span></div>
+    </div>
+    <div class="section-title">Recently added</div>
+    <div class="mini">${recent.map(i=>`<div class="minicard"><div class="ic">${iconFor(i)}</div><b>${i.name}</b><span>${i.loc}</span></div>`).join('') || '<span style="color:var(--sub); font-size:0.85rem">No items yet.</span>'}</div>
+    <div class="section-title">Most frequently purchased</div>
+    <div class="mini">${top.map(i=>`<div class="minicard"><div class="ic">${iconFor(i)}</div><b>${i.name}</b><span>${i.purchases||0}× bought</span></div>`).join('') || '<span style="color:var(--sub); font-size:0.85rem">Nothing yet.</span>'}</div>
+  `;
+}
+
+function renderCatTabs(){
+  const el=document.getElementById('catTabs'); el.innerHTML="";
+  ["All",...CATS].forEach(c=>{
+    const b=document.createElement('div'); b.className='tab'+(catFilter===c?' active':''); b.textContent=c;
+    b.onclick=()=>{catFilter=c; renderInv();}; el.appendChild(b);
+  });
+}
+function renderInv(){
+  renderCatTabs();
+  const q=document.getElementById('search').value.toLowerCase();
+  const list=document.getElementById('invList');
+  let shown=items.filter(i=>(catFilter==='All'||i.cat===catFilter) &&
+    [i.name,i.brand,i.store,i.cat,i.barcode].join(' ').toLowerCase().includes(q));
+  list.innerHTML = shown.length===0 ? `<div class="empty">No items here yet. Tap + to add one.</div>` :
+    shown.map(it=>{
+      const st=status(it);
+      return `<div class="card">
+        <div class="icon">${iconFor(it)}</div>
+        <div class="info">
+          <b>${it.name}</b>
+          <span>${it.brand?it.brand+' · ':''}${packLabel(it)} · ${it.loc} · ${it.store}</span>
+          <div style="margin-top:4px"><span class="badge ${st.cls}">${st.label}</span></div>
+        </div>
+        <div class="qty-ctrl">
+          <div class="qty-row"><button data-act="minus" data-id="${it.id}" ${myRole==='Child'?'disabled':''}>−</button><span class="n">${it.qty}</span><button data-act="plus" data-id="${it.id}" ${myRole==='Child'?'disabled':''}>+</button></div>
+          ${myRole!=='Child'?`<button class="restock" data-act="restock" data-id="${it.id}">+1 pack</button>`:''}
+        </div>
+      </div>`;
+    }).join('');
+  list.querySelectorAll('button[data-act]').forEach(b=>{
+    b.onclick=async ()=>{
+      const id=b.dataset.id, it=items.find(i=>i.id===id);
+      const wasLow = it.qty < it.min;
+      let qty=it.qty, purchases=it.purchases||0;
+      if(b.dataset.act==='plus') qty++;
+      else if(b.dataset.act==='minus') qty=Math.max(0,qty-1);
+      else if(b.dataset.act==='restock'){ qty+=it.perPack; purchases++; }
+      await itemsRef().doc(id).update({qty, purchases});
+      if(!wasLow && qty<it.min) toast(`${it.name} added to shopping list`);
+    };
+  });
+}
+
+function renderShop(){
+  const vt=document.getElementById('vendorTabs'); vt.innerHTML="";
+  ["All",...VENDORS].forEach(v=>{
+    const b=document.createElement('div'); b.className='tab'+(vendorFilter===v?' active':''); b.textContent=v;
+    b.onclick=()=>{vendorFilter=v; renderShop();}; vt.appendChild(b);
+  });
+  const need=items.filter(i=>i.qty<i.min && (vendorFilter==='All'||i.store===vendorFilter));
+  const list=document.getElementById('shopList');
+  list.innerHTML = need.length===0 ? `<div class="empty">Nothing needed right now — you're stocked up.</div>` :
+    need.map(it=>{
+      const deficit=it.min-it.qty;
+      const suggested = it.perPack>1 ? Math.ceil(deficit/it.perPack)*it.perPack : deficit;
+      return `<div class="card">
+        <div class="icon">${iconFor(it)}</div>
+        <div class="info">
+          <b>${it.name}</b>
+          <span>Have ${it.qty} · Need ${it.min} · Buy ~${suggested} ${it.unit}${suggested!==1?'s':''} · ${it.store}</span>
+        </div>
+      </div>`;
+    }).join('');
+}
+
+function render(){
+  if(tab==='dash') renderDash();
+  else if(tab==='inv') renderInv();
+  else renderShop();
+}
+document.getElementById('search').addEventListener('input', ()=>{ if(tab==='dash') switchTab('inv'); else render(); });
+
+const overlay=document.getElementById('overlay');
+document.getElementById('addBtn').onclick=()=>{
+  pendingPhoto="";
+  document.getElementById('sheetTitle').textContent='Add item';
+  document.getElementById('f-cat').innerHTML = CATS.map(c=>`<option>${c}</option>`).join('');
+  ['f-name','f-brand','f-barcode','f-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-perpack').value=1; document.getElementById('f-qty').value=0; document.getElementById('f-min').value=0;
+  document.getElementById('photoPrev').innerHTML='📦';
+  overlay.classList.add('show');
+};
+document.getElementById('closeSheet').onclick=()=>overlay.classList.remove('show');
+overlay.onclick=(e)=>{ if(e.target===overlay) overlay.classList.remove('show'); };
+
+document.getElementById('f-photo').addEventListener('change', (e)=>{
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=()=>{ pendingPhoto=reader.result; document.getElementById('photoPrev').innerHTML=`<img src="${pendingPhoto}">`; };
+  reader.onerror=()=>toast('Could not read that photo');
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('scanBtn').onclick=()=>{
+  toast('Simulated scan — true camera decoding needs a barcode library or native app');
+  document.getElementById('f-barcode').value = '0'+Math.floor(Math.random()*9e11+1e11);
+  document.getElementById('f-name').value = document.getElementById('f-name').value || 'Shampoo';
+  document.getElementById('f-brand').value = document.getElementById('f-brand').value || 'Suave';
+  document.getElementById('f-cat').value='Bathroom'; document.getElementById('f-unit').value='bottle';
+  document.getElementById('f-qty').value=2; document.getElementById('f-min').value=1;
+};
+
+document.getElementById('saveBtn').onclick= async ()=>{
+  const name=document.getElementById('f-name').value.trim();
+  if(!name){ toast('Give the item a name'); return; }
+  try{
+    await itemsRef().add({
+      name,
+      brand:document.getElementById('f-brand').value.trim(),
+      barcode:document.getElementById('f-barcode').value.trim(),
+      photo:pendingPhoto,
+      cat:document.getElementById('f-cat').value,
+      loc:document.getElementById('f-loc').value,
+      unit:document.getElementById('f-unit').value,
+      perPack:Number(document.getElementById('f-perpack').value)||1,
+      qty:Number(document.getElementById('f-qty').value)||0,
+      min:Number(document.getElementById('f-min').value)||0,
+      store:document.getElementById('f-store').value,
+      notes:document.getElementById('f-notes').value.trim(),
+      purchases:0, createdAt: Date.now(),
+    });
+    overlay.classList.remove('show'); toast('Item saved'); switchTab('inv');
+  }catch(e){ toast('Could not save: '+e.message); }
+};
+
+// ---------- PWA service worker ----------
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=> navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>
