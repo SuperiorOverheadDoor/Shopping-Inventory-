@@ -1,8 +1,15 @@
-const CACHE = 'pantry-shell-v1';
-const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
+const CACHE = 'pantry-shell-v2';
+const SHELL = ['./index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)));
+  e.waitUntil(caches.open(CACHE).then(async (c) => {
+    for (const url of SHELL) {
+      try {
+        const res = await fetch(url, {redirect: 'follow'});
+        if (res.ok && !res.redirected) await c.put(url, res.clone());
+      } catch (err) {}
+    }
+  }));
   self.skipWaiting();
 });
 
@@ -13,11 +20,14 @@ self.addEventListener('activate', (e) => {
   self.clients.claim();
 });
 
-// App shell offline-first; everything else (Firestore, etc.) goes to the network as normal.
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
-  if (url.origin !== self.location.origin) return; // let Firebase/Firestore requests pass through untouched
+  if (url.origin !== self.location.origin) return;
+  if (e.request.mode === 'navigate') {
+    e.respondWith(caches.match('./index.html').then((c) => c || fetch(e.request)));
+    return;
+  }
   e.respondWith(
     caches.match(e.request).then((cached) => cached || fetch(e.request).catch(() => cached))
   );
