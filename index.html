@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Pantry — Home Inventory</title>
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Pantry">
@@ -195,6 +195,19 @@ textarea{resize:vertical; min-height:56px;}
   </div>
 </div>
 
+<div class="overlay" id="scanOverlay" style="align-items:center; background:#000;">
+  <div style="position:relative; width:100%; height:100%;">
+    <video id="scanVideo" autoplay playsinline muted style="width:100%; height:100%; object-fit:cover;"></video>
+    <div style="position:absolute; top:0; left:0; right:0; padding:calc(16px + env(safe-area-inset-top,0px)) 16px 16px; display:flex; justify-content:space-between; align-items:flex-start; background:linear-gradient(rgba(0,0,0,.6),transparent);">
+      <span style="color:#fff; font-size:0.9rem;">Point your camera at the barcode</span>
+      <button id="closeScan" style="background:rgba(255,255,255,.15); border:none; color:#fff; width:32px; height:32px; border-radius:50%; font-size:1.1rem;">✕</button>
+    </div>
+    <div id="scanStatus" style="position:absolute; bottom:calc(24px + env(safe-area-inset-bottom,0px)); left:0; right:0; text-align:center; color:#fff; font-size:0.85rem;"></div>
+  </div>
+</div>
+
+<!-- ZXing: reads barcodes from a live camera feed (Safari has no built-in scanner API, so this fills the gap) -->
+<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"></script>
 <!-- Firebase (loaded from Google's CDN — fine once this is hosted on your own domain) -->
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
