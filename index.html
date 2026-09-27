@@ -451,14 +451,65 @@ document.getElementById('f-photo').addEventListener('change', (e)=>{
   reader.readAsDataURL(file);
 });
 
-document.getElementById('scanBtn').onclick=()=>{
-  toast('Simulated scan — true camera decoding needs a barcode library or native app');
-  document.getElementById('f-barcode').value = '0'+Math.floor(Math.random()*9e11+1e11);
-  document.getElementById('f-name').value = document.getElementById('f-name').value || 'Shampoo';
-  document.getElementById('f-brand').value = document.getElementById('f-brand').value || 'Suave';
-  document.getElementById('f-cat').value='Bathroom'; document.getElementById('f-unit').value='bottle';
-  document.getElementById('f-qty').value=2; document.getElementById('f-min').value=1;
-};
+// ---------- Real camera barcode scanning (ZXing) ----------
+let zxingReader = null;
+const scanOverlay = document.getElementById('scanOverlay');
+const scanStatus = document.getElementById('scanStatus');
+
+async function startScanner(){
+  if(!('mediaDevices' in navigator) || !navigator.mediaDevices.getUserMedia){
+    toast('Camera not available on this browser'); return;
+  }
+  scanOverlay.classList.add('show');
+  scanStatus.textContent = 'Starting camera…';
+  try{
+    zxingReader = new ZXing.BrowserMultiFormatReader();
+    const devices = await zxingReader.listVideoInputDevices();
+    if(devices.length===0){ scanStatus.textContent='No camera found.'; return; }
+    const rear = devices.find(d=>/back|rear|environment/i.test(d.label)) || devices[devices.length-1];
+    zxingReader.decodeFromVideoDevice(rear.deviceId, 'scanVideo', (result, err) => {
+      if(result){
+        const code = result.getText();
+        document.getElementById('f-barcode').value = code;
+        stopScanner();
+        lookupProduct(code);
+      }
+      // errors fire continuously while no barcode is in frame — that's normal, ignore them
+    });
+    scanStatus.textContent = 'Hold steady over the barcode…';
+  }catch(e){
+    scanStatus.textContent = '';
+    toast('Camera error: '+(e.message||'permission denied'));
+    stopScanner();
+  }
+}
+function stopScanner(){
+  if(zxingReader){ zxingReader.reset(); zxingReader=null; }
+  scanOverlay.classList.remove('show');
+}
+document.getElementById('scanBtn').onclick = startScanner;
+document.getElementById('closeScan').onclick = stopScanner;
+
+// ---------- Product lookup (Open Food Facts — free, no key, covers food/drinks/toiletries/pet food) ----------
+async function lookupProduct(code){
+  toast('Looking up '+code+'…');
+  try{
+    const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json`);
+    const data = await res.json();
+    if(data.status === 1 && data.product){
+      const p = data.product;
+      if(p.product_name) document.getElementById('f-name').value = p.product_name;
+      if(p.brands) document.getElementById('f-brand').value = p.brands.split(',')[0].trim();
+      const img = p.image_front_small_url || p.image_url;
+      if(img){ pendingPhoto = img; document.getElementById('photoPrev').innerHTML = `<img src="${img}">`; }
+      toast('Found: '+(p.product_name || 'product'));
+    }else{
+      toast('Barcode scanned — not in the product database, fill in details manually');
+    }
+  }catch(e){
+    toast('Barcode scanned — lookup failed, fill in details manually');
+  }
+}
 
 document.getElementById('saveBtn').onclick= async ()=>{
   const name=document.getElementById('f-name').value.trim();
